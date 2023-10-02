@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/tflexsoom/deflemma/internal/assembler"
+	"github.com/tflexsoom/gasm/internal/assembler"
 	"github.com/urfave/cli/v2"
 )
 
@@ -64,9 +64,9 @@ func multiProjectCmd(
 
 func parseSubCmd(cCtx *cli.Context) error {
 	return assembler.ParseOnly(assembler.ParserOptions{
-		ProjectLocations: cCtx.Args().Slice(),
-		OutputLocation:   cCtx.Path("output"),
-		Verbose:          cCtx.Bool("verbose"),
+		Files:          cCtx.Args().Slice(),
+		OutputLocation: cCtx.Path("output"),
+		Verbose:        cCtx.Bool("verbose"),
 	})
 }
 
@@ -81,9 +81,9 @@ var assembleFlags = append(baseFlags,
 
 func assembleSubCmd(cCtx *cli.Context) error {
 	return assembler.Assemble(assembler.AssemblerOptions{
-		ProjectLocations: cCtx.Args().Slice(),
-		OutputLocation:   cCtx.Path("output"),
-		Language:         cCtx.String("language"),
-		Verbose:          cCtx.Bool("verbose"),
+		Files:          cCtx.Args().Slice(),
+		OutputLocation: cCtx.Path("output"),
+		Language:       cCtx.String("language"),
+		Verbose:        cCtx.Bool("verbose"),
 	})
 }
