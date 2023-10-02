@@ -1,7 +1,10 @@
 // author: Tristan Hilbert
-// date: 8/29/2023
-// filename: ldatGrammar.go
-// desc: Parsing Grammar to Build AST for ldat files
+// date: 10/02/2023
+// filename: parser.go
+// desc: Parsing Grammar to Build AST for assembly files of all languages
+//
+//	Currently supporting:
+//	- x86
 package parser
 
 import (
