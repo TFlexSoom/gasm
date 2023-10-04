@@ -8,13 +8,6 @@ import "golang.org/x/exp/maps"
 // 3. Support PE32
 // 4. Support Mach-O
 
-type ExternRef string
-type LibraryName string
-type Path string
-
-type BinaryFile interface {
-}
-
 type symbolTableImpl struct {
 	table        map[ExternRef]uintptr
 	tableReverse map[uintptr]ExternRef
