@@ -1,4 +1,4 @@
-package linker_global
+package linker
 
 type ExternRef string
 type LibraryName string
@@ -6,6 +6,7 @@ type Path string
 
 type BinarySection interface {
 	Name() string
+	Start() uintptr
 	Size() uint64
 	Content() []byte
 	Flags() map[BinarySectionFlag]bool
@@ -22,7 +23,7 @@ type SymbolEntry interface {
 	Value() []byte
 	SectionNo() int16
 	StorageClass() StorageClass
-	AuxEntries() bool
+	HasAuxEntries() bool
 	IsAbsolute() bool
 	IsDefined() bool
 }
@@ -35,6 +36,7 @@ type BinaryFile interface {
 	TargetMagicNumber() BinaryFileTarget
 	FileMagicNumber() uint16
 	VersionStamp() uint16
+	Entrypoint() uintptr
 	ExecBase() uintptr
 	ExecSize() uint64
 	DataBase() uintptr
