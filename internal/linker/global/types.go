@@ -1,5 +1,7 @@
 package linker
 
+import "io"
+
 type ExternRef string
 type LibraryName string
 type Path string
@@ -57,3 +59,10 @@ type BinaryFile struct {
 	Relocations       []RelocationEntry
 	Symbols           []SymbolEntry
 }
+
+// Is this a monad?
+type BinaryFileResult interface {
+	Result() *BinaryFile
+}
+
+type BinaryFileReader func(io.Reader) (BinaryFileResult, error)
