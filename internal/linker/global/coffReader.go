@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 )
 
 type BinaryFileResultCOFF struct {
@@ -15,77 +14,110 @@ func (bfrPE BinaryFileResultCOFF) Result() *BinaryFile {
 	return &bfrPE.coffFile
 }
 
-func ReadIntoFSM(reader io.Reader, ctxt interface{}, fsm func(ByteQueue, interface{}) error) error {
-	bytesReadAtOnce := 1024
-	readingBuffer := make([]byte, 0, bytesReadAtOnce)
-	byteQueue := NewByteQueueCap(bytesReadAtOnce)
-
-	for {
-		n, err := reader.Read(readingBuffer)
-		if err == io.EOF {
-			// There is no more data to read
-			break
-		}
-		if err != nil {
-			return err
-		}
-
-		if n > 0 {
-			byteQueue.Append(readingBuffer)
-			err = fsm(byteQueue, ctxt)
-			if err != nil {
-				return err
-			}
-		} else {
-			log.Default().Println("Zero Read!")
-		}
-	}
-
-	return nil
+type CoffFsmState struct {
+	bFile                   BinaryFile
+	numSectionHeaders       uint16
+	symbolTableStartingAddr uintptr
+	numSymbols              uint32
+	hasOptionalHeader       bool
+	def                     CoffFsmDefinition
 }
 
-const finalState uint = 100
-
-type COFFReadingState struct {
-	bFile       BinaryFile
-	switchState uint
+type CoffFsmDefinition struct {
+	sizeBytes  int
+	transform  func([]byte) (interface{}, error)
+	consume    func(*CoffFsmState, interface{})
+	nextState  func(*CoffFsmState) int
+	isEndState bool
 }
 
-func coffFsmImpl(bQueue ByteQueue, fsmStateUncasted interface{}) error {
-	var fsmState *COFFReadingState = (fsmStateUncasted).(*COFFReadingState)
+var fsmDefinitions = map[int]CoffFsmDefinition{
+	0: { // ver no
+		sizeBytes:  2,
+		transform:  func(bs []byte) (interface{}, error) { return BytesToVarBigEndian(bs), nil },
+		consume:    func(s *CoffFsmState, data interface{}) { s.bFile.VersionNo = (data).(uint16) },
+		nextState:  func(cfs *CoffFsmState) int { return 1 },
+		isEndState: false,
+	},
+	1: { // num of section headers
+		sizeBytes:  2,
+		transform:  func(bs []byte) (interface{}, error) { return BytesToVarBigEndian(bs), nil },
+		consume:    func(s *CoffFsmState, data interface{}) { s.numSectionHeaders = (data).(uint16) },
+		nextState:  func(cfs *CoffFsmState) int { return 2 },
+		isEndState: false,
+	},
+	2: { // timestamp
+		sizeBytes:  4,
+		transform:  func(bs []byte) (interface{}, error) { return BytesToVarBigEndian(bs), nil },
+		consume:    func(s *CoffFsmState, data interface{}) { s.bFile.Timestamp = (data).(uint32) },
+		nextState:  func(cfs *CoffFsmState) int { return 3 },
+		isEndState: false,
+	},
+	3: { // symbol table starting addr
+		sizeBytes:  4,
+		transform:  func(bs []byte) (interface{}, error) { return BytesToVarBigEndian(bs), nil },
+		consume:    func(s *CoffFsmState, data interface{}) { s.symbolTableStartingAddr = uintptr((data).(uint32)) },
+		nextState:  func(cfs *CoffFsmState) int { return 4 },
+		isEndState: false,
+	},
+	4: { // num symbols
+		sizeBytes:  4,
+		transform:  func(bs []byte) (interface{}, error) { return BytesToVarBigEndian(bs), nil },
+		consume:    func(s *CoffFsmState, data interface{}) { s.numSymbols = (data).(uint32) },
+		nextState:  func(cfs *CoffFsmState) int { return 5 },
+		isEndState: false,
+	},
+	5: { // optional header size
+		sizeBytes:  2,
+		transform:  func(bs []byte) (interface{}, error) { return BytesToVarBigEndian(bs), nil },
+		consume:    func(s *CoffFsmState, data interface{}) { s.hasOptionalHeader = (data).(uint16) == 28 },
+		nextState:  func(cfs *CoffFsmState) int { return 6 },
+		isEndState: false,
+	},
+	6: { // flags
+		sizeBytes: 2,
+		transform: func(bs []byte) (interface{}, error) { return BytesToVarBigEndian(bs), nil },
+		consume: func(s *CoffFsmState, data interface{}) {
+			// TODO FLAGS translator
+			// flags := (data).(uint16)
+			s.bFile.Flags = map[BinaryFileFlag]bool{}
+		},
+		nextState:  func(cfs *CoffFsmState) int { return 7 },
+		isEndState: false,
+	},
+}
 
-	for fsmState.switchState < 20 {
+func (fsmState *CoffFsmState) numBytes() int {
+	return fsmState.def.sizeBytes
+}
 
-		switch fsmState.switchState {
-		case 0: // ver id
-			segSize := 2
-			if !bQueue.CanPop(segSize) {
-				break // Read another line
-			}
-			fsmState.bFile.VersionNo = (BytesToVarBigEndian(bQueue.Pop(segSize))).(uint16)
-			fsmState.switchState = 1
-			break
-		case finalState:
-			return nil
-		default:
-			return errors.New(fmt.Sprintf("Unknown State: %v", fsmState.switchState))
-		}
-	}
+func (fsmState *CoffFsmState) transform(bs []byte) (interface{}, error) {
+	return fsmState.def.transform(bs)
+}
 
-	return nil
+func (fsmState *CoffFsmState) consume(data interface{}) {
+	fsmState.def.consume(fsmState, data)
+}
+
+func (fsmState *CoffFsmState) nextState() {
+	fsmState.def = fsmDefinitions[fsmState.def.nextState(fsmState)]
+}
+
+func (fsmState *CoffFsmState) isEndState() bool {
+	return fsmState.def.isEndState
 }
 
 func GetCOFFReader() BinaryFileReader {
 	return (func(reader io.Reader) (BinaryFileResult, error) {
-		fsmState := COFFReadingState{}
+		fsmState := CoffFsmState{}
 
-		err := ReadIntoFSM(reader, (&fsmState), coffFsmImpl)
+		err := ReadIntoFSM(reader, (&fsmState), Fsm)
 		if err != nil {
 			return nil, err
 		}
 
-		if fsmState.switchState != 20 {
-			return nil, errors.New(fmt.Sprintf("Not Enough Bytes To Fulfill COFF File! State: %v", fsmState.switchState))
+		if !fsmState.def.isEndState {
+			return nil, errors.New(fmt.Sprintf("Not Enough Bytes To Fulfill COFF File! State: %v", fsmState.def))
 		}
 
 		result := BinaryFileResultCOFF{

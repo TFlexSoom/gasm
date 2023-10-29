@@ -130,3 +130,27 @@ func TestByteQueueLessThanPageAppend(t *testing.T) {
 		bQueue.Append([]byte{0x01})
 	}
 }
+
+func TestByteQueueCanPop(t *testing.T) {
+	windowAlloc := 5
+	ones := take(0x01, windowAlloc)
+
+	bQueue := NewByteQueueCap(windowAlloc)
+	bQueue.Append(ones)
+
+	for i := 0; i < len(ones); i++ {
+		if !bQueue.CanPop(i + 1) {
+			t.Errorf("Can Pop %v but ByteQueue reported false!", i+1)
+		}
+	}
+
+	bQueue.Pop(2)
+
+	if !bQueue.CanPop(3) {
+		t.Error("Can Pop 3 but ByteQueue reported false!")
+	}
+
+	if bQueue.CanPop(4) || bQueue.CanPop(5) {
+		t.Error("Can't Pop 4 or 5 but ByteQueue reported true!")
+	}
+}
