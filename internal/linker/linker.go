@@ -1,6 +1,10 @@
 package linker
 
 import (
+	"log"
+	"os"
+
+	"github.com/alecthomas/repr"
 	global "github.com/tflexsoom/gasm/internal/linker/global"
 	windows "github.com/tflexsoom/gasm/internal/linker/windows"
 	"golang.org/x/exp/maps"
@@ -15,11 +19,11 @@ import (
 type symbolTableImpl struct {
 	table        map[global.ExternRef]uintptr
 	tableReverse map[uintptr]global.ExternRef
-	libraries    []global.Path
-	formats      map[string]global.BinaryFileReader
+	// libraries    []global.Path
+	formats map[string]global.BinaryFileReader
 }
 
-func (symTable symbolTableImpl) addSymbol(ref global.ExternRef, address uintptr) {
+func (symTable symbolTableImpl) AddSymbol(ref global.ExternRef, address uintptr) {
 	symTable.table[ref] = address
 	symTable.tableReverse[address] = ref
 }
@@ -59,4 +63,46 @@ func NewTable(formats []string) symbolTableImpl {
 	return symbolTableImpl{
 		formats: getFormatReaders(formats),
 	}
+}
+
+type ObjectifyOptions struct {
+	Files          []string
+	OutputLocation string
+	Verbose        bool
+}
+
+func Objectify(options ObjectifyOptions) error {
+	peReader := windows.GetPEReader()
+
+	outFile, err := os.OpenFile(
+		options.OutputLocation,
+		os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
+		0644,
+	)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range options.Files {
+		reader, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+
+		result, err := peReader(reader)
+		if err != nil {
+			return err
+		}
+
+		num, err := outFile.WriteString(repr.String(result))
+		if err != nil {
+			return err
+		}
+
+		if options.Verbose {
+			log.Printf("%d bytes written!", num)
+		}
+	}
+
+	return nil
 }

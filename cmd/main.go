@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/tflexsoom/gasm/internal/assembler"
+	"github.com/tflexsoom/gasm/internal/linker"
 	"github.com/urfave/cli/v2"
 )
 
@@ -31,10 +32,10 @@ func main() {
 				Usage: "utility tools for development",
 				Subcommands: []*cli.Command{
 					{
-						Name:   "windowspe",
+						Name:   "objectify",
 						Usage:  "print parsed PE object file",
 						Flags:  baseFlags,
-						Action: multiProjectCmd("debug windowspe", windowsPeSubCmd),
+						Action: multiProjectCmd("debug objectify", objectifySubCmd),
 					},
 				},
 			},
@@ -67,7 +68,7 @@ func multiProjectCmd(
 ) func(*cli.Context) error {
 	return func(cCtx *cli.Context) error {
 		if cCtx.Args().Len() < 1 {
-			return errors.New("Missing Project Destination! \"COMMAND [command options] [arguments...]\"")
+			return errors.New("missing project destination! \"command [command options] [arguments...]\"")
 		}
 
 		return cmdImpl(cCtx)
@@ -100,8 +101,8 @@ func assembleSubCmd(cCtx *cli.Context) error {
 	})
 }
 
-func windowsPeSubCmd(cCtx *cli.Context) error {
-	return assembler.ParseOnly(assembler.ParserOptions{
+func objectifySubCmd(cCtx *cli.Context) error {
+	return linker.Objectify(linker.ObjectifyOptions{
 		Files:          cCtx.Args().Slice(),
 		OutputLocation: cCtx.Path("output"),
 		Verbose:        cCtx.Bool("verbose"),
