@@ -26,6 +26,18 @@ func main() {
 				Flags:  baseFlags,
 				Action: multiProjectCmd("parse", parseSubCmd),
 			},
+			{
+				Name:  "debug",
+				Usage: "utility tools for development",
+				Subcommands: []*cli.Command{
+					{
+						Name:   "windowspe",
+						Usage:  "print parsed PE object file",
+						Flags:  baseFlags,
+						Action: multiProjectCmd("debug windowspe", windowsPeSubCmd),
+					},
+				},
+			},
 		},
 	}
 
@@ -84,6 +96,14 @@ func assembleSubCmd(cCtx *cli.Context) error {
 		Files:          cCtx.Args().Slice(),
 		OutputLocation: cCtx.Path("output"),
 		Language:       cCtx.String("language"),
+		Verbose:        cCtx.Bool("verbose"),
+	})
+}
+
+func windowsPeSubCmd(cCtx *cli.Context) error {
+	return assembler.ParseOnly(assembler.ParserOptions{
+		Files:          cCtx.Args().Slice(),
+		OutputLocation: cCtx.Path("output"),
 		Verbose:        cCtx.Bool("verbose"),
 	})
 }

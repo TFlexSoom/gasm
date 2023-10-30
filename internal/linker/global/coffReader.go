@@ -126,23 +126,23 @@ var fsmDefinitions = map[int]CoffFsmDefinition{
 	/* ----------------------------- END TODO -------------------------------- */
 }
 
-func (fsmState *CoffFsmState) numBytes() int {
+func (fsmState *CoffFsmState) NumBytes() int {
 	return fsmState.def.sizeBytes
 }
 
-func (fsmState *CoffFsmState) transform(bs []byte) (interface{}, error) {
+func (fsmState *CoffFsmState) Transform(bs []byte) (interface{}, error) {
 	return fsmState.def.transform(bs)
 }
 
-func (fsmState *CoffFsmState) consume(data interface{}) {
+func (fsmState *CoffFsmState) Consume(data interface{}) {
 	fsmState.def.consume(fsmState, data)
 }
 
-func (fsmState *CoffFsmState) nextState() {
+func (fsmState *CoffFsmState) NextState() {
 	fsmState.def = fsmDefinitions[fsmState.def.nextState(fsmState)]
 }
 
-func (fsmState *CoffFsmState) isEndState() bool {
+func (fsmState *CoffFsmState) IsEndState() bool {
 	return fsmState.def.isEndState
 }
 
