@@ -79,3 +79,12 @@ func BytesToVarLittleEndian(slice []byte) interface{} {
 
 	return result
 }
+
+func VariableToFlagValues[N uint8 | uint16 | uint32 | uint64](value N, onValid func(N)) {
+	var i N = 1
+	for ; i != 0; i = (i << 1) {
+		if value&i != 0 {
+			onValid(i)
+		}
+	}
+}

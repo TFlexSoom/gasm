@@ -1,23 +1,44 @@
 package linker
 
-type BinaryFileFlag int
+type BinaryFileFlag uint16
 
 const (
-	BFF_STRIPPED_RELOCATION BinaryFileFlag = iota
-	BFF_IS_RELOCATABLE
-	BFF_STRIPPED_LINE_NUMBERS
-	BFF_STRIPPED_SYMBOLS
-	BFF_LITTLE_ENDIAN
-	BFF_BIG_ENDIAN_MARKED
-	BFF_DUPLICATE_SYMBOLS_REMOVED
-	BFF_LARGE_ADDRESS_AWARE
-	BFF_32BIT_MACHINE
-	BFF_SYSTEM
-	BFF_DLL
-	BFF_UP_SYSTEM_ONLY
-	BFF_BYTES_REVERSED_HI
-	BFF_BYTES_REVERSED_LO
+	BFF_STRIPPED_RELOCATION       BinaryFileFlag = 0x0001
+	BFF_IS_RELOCATABLE            BinaryFileFlag = 0x0002
+	BFF_STRIPPED_LINE_NUMBERS     BinaryFileFlag = 0x0004
+	BFF_STRIPPED_SYMBOLS          BinaryFileFlag = 0x0008
+	BFF_AGGRESSIVE_WS_TRIM        BinaryFileFlag = 0x0010
+	BFF_LARGE_ADDRESS_AWARE       BinaryFileFlag = 0x0020
+	BFF_DUPLICATE_SYMBOLS_REMOVED BinaryFileFlag = 0x0040
+	BFF_BYTES_REVERSED_LO         BinaryFileFlag = 0x0080
+	BFF_LITTLE_ENDIAN             BinaryFileFlag = 0x0100
+	BFF_BIG_ENDIAN_MARKED         BinaryFileFlag = 0x0200
+	BFF_REMOVABLE_RUN_FROM_SWAP   BinaryFileFlag = 0x0400
+	BFF_NET_RUN_FROM_SWAP         BinaryFileFlag = 0x0800
+	BFF_SYSTEM                    BinaryFileFlag = 0x1000
+	BFF_DLL                       BinaryFileFlag = 0x2000
+	BFF_UP_SYSTEM_ONLY            BinaryFileFlag = 0x4000
+	BFF_BYTES_REVERSED_HI         BinaryFileFlag = 0x8000
 )
+
+var BinaryFileFlagsMap = map[BinaryFileFlag]bool{
+	BFF_STRIPPED_RELOCATION:       true,
+	BFF_IS_RELOCATABLE:            true,
+	BFF_STRIPPED_LINE_NUMBERS:     true,
+	BFF_STRIPPED_SYMBOLS:          true,
+	BFF_AGGRESSIVE_WS_TRIM:        true,
+	BFF_LARGE_ADDRESS_AWARE:       true,
+	BFF_DUPLICATE_SYMBOLS_REMOVED: true,
+	BFF_BYTES_REVERSED_LO:         true,
+	BFF_LITTLE_ENDIAN:             true,
+	BFF_BIG_ENDIAN_MARKED:         true,
+	BFF_REMOVABLE_RUN_FROM_SWAP:   true,
+	BFF_NET_RUN_FROM_SWAP:         true,
+	BFF_SYSTEM:                    true,
+	BFF_DLL:                       true,
+	BFF_UP_SYSTEM_ONLY:            true,
+	BFF_BYTES_REVERSED_HI:         true,
+}
 
 type BinaryFileTarget uint16
 
@@ -30,7 +51,6 @@ const (
 	BFT_ARM         BinaryFileTarget = 0x1c0
 	BFT_ARM64       BinaryFileTarget = 0xaa64
 	BFT_ARMNT       BinaryFileTarget = 0x1c4
-	BFT_AXP64       BinaryFileTarget = 0x284
 	BFT_EBC         BinaryFileTarget = 0xebc
 	BFT_I386        BinaryFileTarget = 0x14c
 	BFT_IA64        BinaryFileTarget = 0x200
@@ -54,6 +74,38 @@ const (
 	BFT_WCEMIPSV2   BinaryFileTarget = 0x169
 )
 
+var BinaryFileTargetMap = map[BinaryFileTarget]bool{
+	BFT_UNKNOWN:     true,
+	BFT_ALPHA:       true,
+	BFT_ALPHA64:     true,
+	BFT_AM33:        true,
+	BFT_AMD64:       true,
+	BFT_ARM:         true,
+	BFT_ARM64:       true,
+	BFT_ARMNT:       true,
+	BFT_EBC:         true,
+	BFT_I386:        true,
+	BFT_IA64:        true,
+	BFT_LOONGARCH32: true,
+	BFT_LOONGARCH64: true,
+	BFT_M32R:        true,
+	BFT_MIPS16:      true,
+	BFT_MIPSFPU:     true,
+	BFT_MIPSFPU16:   true,
+	BFT_POWERPC:     true,
+	BFT_POWERPCFP:   true,
+	BFT_R4000:       true,
+	BFT_RISCV32:     true,
+	BFT_RISCV64:     true,
+	BFT_RISCV128:    true,
+	BFT_SH3:         true,
+	BFT_SH3DSP:      true,
+	BFT_SH4:         true,
+	BFT_SH5:         true,
+	BFT_THUMB:       true,
+	BFT_WCEMIPSV2:   true,
+}
+
 type BinarySectionFlag int
 
 const (
@@ -72,6 +124,23 @@ const (
 	BSF_VECTOR
 	BSF_PADDED
 )
+
+var BinarySectionFlagMap = map[BinarySectionFlag]bool{
+	BSF_REGULAR: true,
+	BSF_DUMMY:   true,
+	BSF_NO_LOAD: true,
+	BSF_GROUP:   true,
+	BSF_PADDING: true,
+	BSF_COPY:    true,
+	BSF_TEXT:    true,
+	BSF_DATA:    true,
+	BSF_BSS:     true,
+	BSF_BLOCK:   true,
+	BSF_PASS:    true,
+	BSF_CLINK:   true,
+	BSF_VECTOR:  true,
+	BSF_PADDED:  true,
+}
 
 type RelocationType uint16
 
@@ -107,10 +176,42 @@ const (
 	RT_RELLONG
 )
 
+var RelocationTypeMap = map[RelocationType]bool{
+	RT_ADD:     true,
+	RT_SUB:     true,
+	RT_NEG:     true,
+	RT_MPY:     true,
+	RT_DIV:     true,
+	RT_MOD:     true,
+	RT_SR:      true,
+	RT_ASR:     true,
+	RT_SL:      true,
+	RT_AND:     true,
+	RT_OR:      true,
+	RT_XOR:     true,
+	RT_NOTB:    true,
+	RT_ULDFLD:  true,
+	RT_SLDFLD:  true,
+	RT_USTFLD:  true,
+	RT_SSTFLD:  true,
+	RT_PUSH:    true,
+	RT_PUSHSK:  true,
+	RT_PUSHUK:  true,
+	RT_PUSHPC:  true,
+	RT_DUP:     true,
+	RT_XSTFLD:  true,
+	RT_PUSHSV:  true,
+	RT_ABS:     true,
+	RT_RELBYTE: true,
+	RT_RELWORD: true,
+	RT_REL24:   true,
+	RT_RELLONG: true,
+}
+
 type StorageClass uint8
 
 const (
-	SC_NULL uint8 = iota
+	SC_NULL StorageClass = iota
 	SC_AUTO
 	SC_EXT
 	SC_STAT
@@ -133,11 +234,42 @@ const (
 	SC_STATLAB
 	SC_EXTLAB
 
-	SC_VARARG = 27
+	SC_VARARG StorageClass = 27
 
-	SC_BLOCK = 100
-	SC_FCN   = 101
-	SC_EOS   = 102
-	SC_FILE  = 103
-	SC_LINE  = 104
+	SC_BLOCK StorageClass = 100
+	SC_FCN   StorageClass = 101
+	SC_EOS   StorageClass = 102
+	SC_FILE  StorageClass = 103
+	SC_LINE  StorageClass = 104
 )
+
+var StorageClassMap = map[StorageClass]bool{
+	SC_NULL:     true,
+	SC_AUTO:     true,
+	SC_EXT:      true,
+	SC_STAT:     true,
+	SC_REG:      true,
+	SC_EXTREF:   true,
+	SC_LABEL:    true,
+	SC_ULABEL:   true,
+	SC_MOS:      true,
+	SC_ARG:      true,
+	SC_STRTAG:   true,
+	SC_MOU:      true,
+	SC_UNTAG:    true,
+	SC_TPDEF:    true,
+	SC_USTATIC:  true,
+	SC_ENTAG:    true,
+	SC_MOE:      true,
+	SC_REGPARAM: true,
+	SC_FIELD:    true,
+	SC_UEXT:     true,
+	SC_STATLAB:  true,
+	SC_EXTLAB:   true,
+	SC_VARARG:   true,
+	SC_BLOCK:    true,
+	SC_FCN:      true,
+	SC_EOS:      true,
+	SC_FILE:     true,
+	SC_LINE:     true,
+}
