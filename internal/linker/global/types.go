@@ -43,10 +43,10 @@ type BinaryFileHeader struct {
 }
 
 type BinaryFileSections struct {
-	sections    []BinarySection
-	execSection *BinarySection
-	dataSection *BinarySection
-	bssSection  *BinarySection
+	Sections    []BinarySection
+	ExecSection *BinarySection
+	DataSection *BinarySection
+	BssSection  *BinarySection
 }
 
 type BinaryFile struct {

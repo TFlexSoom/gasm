@@ -1,7 +1,6 @@
 package linker
 
 import (
-	"errors"
 	"fmt"
 	"io"
 )
@@ -78,32 +77,72 @@ var fsmDefinitions = map[int]CoffFsmDefinition{
 		sizeBytes: 2,
 		transform: func(bs []byte) (interface{}, error) { return BytesToVarBigEndian(bs), nil },
 		consume: func(s *CoffFsmState, data interface{}) {
-			// TODO FLAGS translator
-			// flags := (data).(uint16)
-			s.bFile.Flags = map[BinaryFileFlag]bool{}
+			flags := (data).(uint16)
+			s.bFile.Flags = make(map[BinaryFileFlag]bool)
+			VariableToFlagValues(flags, func(flag uint16) { s.bFile.Flags[BinaryFileFlag(flag)] = true })
 		},
 		nextState:  func(cfs *CoffFsmState) int { return 7 },
 		isEndState: false,
 	},
+	7: { // targetId
+		sizeBytes: 2,
+		transform: func(bs []byte) (interface{}, error) { return BytesToVarBigEndian(bs), nil },
+		consume:   func(s *CoffFsmState, data interface{}) { s.bFile.TargetMagicNumber = BinaryFileTarget((data).(uint16)) },
+		nextState: func(cfs *CoffFsmState) int {
+			if cfs.hasOptionalHeader {
+				return 8
+			}
+
+			if cfs.numSectionHeaders > 0 {
+				return 20
+			}
+
+			return 100
+		},
+		isEndState: false,
+	},
+	/* ----------------------------- TODO -------------------------------- */
+	8: { // optionalFile :: Optional Magic Number
+		sizeBytes:  2,
+		transform:  func(bs []byte) (interface{}, error) { return BytesToVarBigEndian(bs), nil },
+		consume:    func(s *CoffFsmState, data interface{}) { s.bFile.TargetMagicNumber = BinaryFileTarget((data).(uint16)) },
+		nextState:  func(cfs *CoffFsmState) int { return 9 },
+		isEndState: false,
+	},
+	20: { // section Headers
+		sizeBytes:  2,
+		transform:  func(bs []byte) (interface{}, error) { return BytesToVarBigEndian(bs), nil },
+		consume:    func(s *CoffFsmState, data interface{}) { s.bFile.TargetMagicNumber = BinaryFileTarget((data).(uint16)) },
+		nextState:  func(cfs *CoffFsmState) int { return 9 },
+		isEndState: false,
+	},
+	100: { // End State
+		sizeBytes:  0,
+		transform:  nil,
+		consume:    nil,
+		nextState:  nil,
+		isEndState: true,
+	},
+	/* ----------------------------- END TODO -------------------------------- */
 }
 
-func (fsmState *CoffFsmState) numBytes() int {
+func (fsmState *CoffFsmState) NumBytes() int {
 	return fsmState.def.sizeBytes
 }
 
-func (fsmState *CoffFsmState) transform(bs []byte) (interface{}, error) {
+func (fsmState *CoffFsmState) Transform(bs []byte) (interface{}, error) {
 	return fsmState.def.transform(bs)
 }
 
-func (fsmState *CoffFsmState) consume(data interface{}) {
+func (fsmState *CoffFsmState) Consume(data interface{}) {
 	fsmState.def.consume(fsmState, data)
 }
 
-func (fsmState *CoffFsmState) nextState() {
+func (fsmState *CoffFsmState) NextState() {
 	fsmState.def = fsmDefinitions[fsmState.def.nextState(fsmState)]
 }
 
-func (fsmState *CoffFsmState) isEndState() bool {
+func (fsmState *CoffFsmState) IsEndState() bool {
 	return fsmState.def.isEndState
 }
 
@@ -117,7 +156,7 @@ func GetCOFFReader() BinaryFileReader {
 		}
 
 		if !fsmState.def.isEndState {
-			return nil, errors.New(fmt.Sprintf("Not Enough Bytes To Fulfill COFF File! State: %v", fsmState.def))
+			return nil, fmt.Errorf("not enough bytes to fulfill coff file! state: %v", fsmState.def)
 		}
 
 		result := BinaryFileResultCOFF{

@@ -6,11 +6,11 @@ import (
 )
 
 type FsmState interface {
-	numBytes() int
-	transform([]byte) (interface{}, error)
-	consume(interface{})
-	nextState()
-	isEndState() bool
+	NumBytes() int
+	Transform([]byte) (interface{}, error)
+	Consume(interface{})
+	NextState()
+	IsEndState() bool
 }
 
 func ReadIntoFSM(reader io.Reader, ctxt FsmState, fsm func(ByteQueue, FsmState) error) error {
@@ -43,18 +43,18 @@ func ReadIntoFSM(reader io.Reader, ctxt FsmState, fsm func(ByteQueue, FsmState) 
 }
 
 func Fsm(bQueue ByteQueue, fsmState FsmState) error {
-	for ; fsmState.isEndState(); fsmState.nextState() {
-		numBytes := fsmState.numBytes()
+	for ; fsmState.IsEndState(); fsmState.NextState() {
+		numBytes := fsmState.NumBytes()
 		if !bQueue.CanPop(numBytes) {
 			break // Load More Bytes
 		}
 
-		data, err := fsmState.transform(bQueue.Pop(numBytes))
+		data, err := fsmState.Transform(bQueue.Pop(numBytes))
 		if err != nil {
 			return err
 		}
 
-		fsmState.consume(data)
+		fsmState.Consume(data)
 	}
 
 	return nil
