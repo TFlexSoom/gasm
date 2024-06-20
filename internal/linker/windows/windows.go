@@ -8,7 +8,9 @@ import (
 )
 
 type OptionalHeaderPE struct {
-	Size                  uint16
+	MagicNumber           uint16
+	MajorLinkerVersion    uint8
+	MinorLinkerVersion    uint8
 	MajorOSVersion        uint16
 	MinorOSVersion        uint16
 	MajorImageVersion     uint16
@@ -36,6 +38,7 @@ func (bfrPE BinaryFileResultPE) Result() *global.BinaryFile {
 }
 
 type PeFsmState struct {
+	bFileOptionalHeader     OptionalHeaderPE
 	bFile                   global.BinaryFile
 	numSectionHeaders       uint16
 	symbolTableStartingAddr uintptr
@@ -57,42 +60,42 @@ var fsmDefinitions = map[int]PeFsmDefinition{
 		sizeBytes:  2,
 		transform:  func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
 		consume:    func(s *PeFsmState, data interface{}) { s.bFile.VersionNo = (data).(uint16) },
-		nextState:  func(cfs *PeFsmState) int { return 1 },
+		nextState:  func(s *PeFsmState) int { return 1 },
 		isEndState: false,
 	},
 	1: { // num of section headers
 		sizeBytes:  2,
 		transform:  func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
 		consume:    func(s *PeFsmState, data interface{}) { s.numSectionHeaders = (data).(uint16) },
-		nextState:  func(cfs *PeFsmState) int { return 2 },
+		nextState:  func(s *PeFsmState) int { return 2 },
 		isEndState: false,
 	},
 	2: { // timestamp
 		sizeBytes:  4,
 		transform:  func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
 		consume:    func(s *PeFsmState, data interface{}) { s.bFile.Timestamp = (data).(uint32) },
-		nextState:  func(cfs *PeFsmState) int { return 3 },
+		nextState:  func(s *PeFsmState) int { return 3 },
 		isEndState: false,
 	},
 	3: { // symbol table starting addr
 		sizeBytes:  4,
 		transform:  func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
 		consume:    func(s *PeFsmState, data interface{}) { s.symbolTableStartingAddr = uintptr((data).(uint32)) },
-		nextState:  func(cfs *PeFsmState) int { return 4 },
+		nextState:  func(s *PeFsmState) int { return 4 },
 		isEndState: false,
 	},
 	4: { // num symbols
 		sizeBytes:  4,
 		transform:  func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
 		consume:    func(s *PeFsmState, data interface{}) { s.numSymbols = (data).(uint32) },
-		nextState:  func(cfs *PeFsmState) int { return 5 },
+		nextState:  func(s *PeFsmState) int { return 5 },
 		isEndState: false,
 	},
 	5: { // optional header size
 		sizeBytes:  2,
 		transform:  func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
 		consume:    func(s *PeFsmState, data interface{}) { s.hasOptionalHeader = (data).(uint16) == 28 },
-		nextState:  func(cfs *PeFsmState) int { return 6 },
+		nextState:  func(s *PeFsmState) int { return 6 },
 		isEndState: false,
 	},
 	6: { // flags
@@ -103,7 +106,7 @@ var fsmDefinitions = map[int]PeFsmDefinition{
 			s.bFile.Flags = make(map[global.BinaryFileFlag]bool)
 			global.VariableToFlagValues(flags, func(flag uint16) { s.bFile.Flags[global.BinaryFileFlag(flag)] = true })
 		},
-		nextState:  func(cfs *PeFsmState) int { return 7 },
+		nextState:  func(s *PeFsmState) int { return 7 },
 		isEndState: false,
 	},
 	7: { // targetId
@@ -112,12 +115,12 @@ var fsmDefinitions = map[int]PeFsmDefinition{
 		consume: func(s *PeFsmState, data interface{}) {
 			s.bFile.TargetMagicNumber = global.BinaryFileTarget((data).(uint16))
 		},
-		nextState: func(cfs *PeFsmState) int {
-			if cfs.hasOptionalHeader {
+		nextState: func(s *PeFsmState) int {
+			if s.hasOptionalHeader {
 				return 8
 			}
 
-			if cfs.numSectionHeaders > 0 {
+			if s.numSectionHeaders > 0 {
 				return 20
 			}
 
@@ -125,14 +128,40 @@ var fsmDefinitions = map[int]PeFsmDefinition{
 		},
 		isEndState: false,
 	},
-	/* ----------------------------- TODO -------------------------------- */
-	8: { // optionalFile :: Optional Magic Number
+	8: { // optionalFileHeader :: Optional Magic Number
 		sizeBytes: 2,
 		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
 		consume: func(s *PeFsmState, data interface{}) {
-			s.bFile.TargetMagicNumber = global.BinaryFileTarget((data).(uint16))
+			s.bFile.Header.FileMagicNumber = (data).(uint16)
 		},
-		nextState:  func(cfs *PeFsmState) int { return 9 },
+		nextState:  func(s *PeFsmState) int { return 9 },
+		isEndState: false,
+	},
+	9: { // optionalFileHeader :: Major Linker Version
+		sizeBytes: 1,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			s.bFileOptionalHeader.MajorLinkerVersion = (data).(uint8)
+		},
+		nextState:  func(s *PeFsmState) int { return 10 },
+		isEndState: false,
+	},
+	10: { // optionalFileHeader :: Minor Linker Version
+		sizeBytes: 1,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			s.bFileOptionalHeader.MinorLinkerVersion = (data).(uint8)
+		},
+		nextState:  func(s *PeFsmState) int { return 11 },
+		isEndState: false,
+	},
+	11: { // optionalFileHeader :: Minor Linker Version
+		sizeBytes: 1,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			s.bFile.Header. = (data).(uint8)
+		},
+		nextState:  func(s *PeFsmState) int { return 11 },
 		isEndState: false,
 	},
 	20: { // section Headers
@@ -141,7 +170,7 @@ var fsmDefinitions = map[int]PeFsmDefinition{
 		consume: func(s *PeFsmState, data interface{}) {
 			s.bFile.TargetMagicNumber = global.BinaryFileTarget((data).(uint16))
 		},
-		nextState:  func(cfs *PeFsmState) int { return 9 },
+		nextState:  func(s *PeFsmState) int { return 9 },
 		isEndState: false,
 	},
 	100: { // End State

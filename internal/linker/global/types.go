@@ -31,7 +31,6 @@ type SymbolEntry struct {
 }
 
 type BinaryFileHeader struct {
-	Size             uint64
 	FileMagicNumber  uint16
 	VersionStamp     uint16
 	Entrypoint       uintptr

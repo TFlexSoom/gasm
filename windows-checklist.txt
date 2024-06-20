@@ -1,0 +1,41 @@
+-- US COFF MICROSOFT --
+VersionNo :: Machine
+Timestamp :: TimeDateStamp
+Flags :: Characteristics
+FileMagicNumber
+VersionStamp 
+Entrypoint
+ImageBase
+ImageSize
+HeaderSize 
+SectionAlignment 
+FileAlignment
+-- US COFF MICROSOFT END -- 
+-- US MICROSOFT ONLY --
+TEMP numSectionHeaders :: NumberOfSections
+TEMP symbolTableStartingAddr :: PointerToSymbolTable
+TEMP numberOfSymbols :: numberOfSymbols
+TEMP hasOptionalHeader :: SizeOfOptionalHeader
+MagicNumber :: Magic ** Supposedly COFF
+MajorLinkerVersion :: MajorLinkerVersion ** Supposedly COFF
+MinorLinkerVersion :: MinorLinkerVersion ** Supposedly COFF
+TEMP SizeOfCode :: SizeOfCode ** Supposedly COFF
+TEMP SizeOfInitializedData :: SizeOfInitializedData ** Supposedly COFF
+TEMP SizeOfUninitializedData :: SizeOfUninitializedData ** Supposedly COFF
+
+-- US MICROSOFT ONLY END -- 
+
+
+BinarySection* {
+    Name, Start, Size, Content, Flags(includes type)
+}
+
+Relocation* {
+    VirtualAddress,
+    SymTableIndex,
+    RelocationType,
+}
+
+Symbols* {
+    Name, Value, SectionNo, StorageClass, HasAuxEntries, IsAbsolute, IsDefined
+}
