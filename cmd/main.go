@@ -35,7 +35,7 @@ func main() {
 						Name:   "objectify",
 						Usage:  "print parsed PE object file",
 						Flags:  baseFlags,
-						Action: multiProjectCmd("debug objectify", objectifySubCmd),
+						Action: multiProjectCmd("objectify", objectifySubCmd),
 					},
 				},
 			},

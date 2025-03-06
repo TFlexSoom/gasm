@@ -132,7 +132,7 @@ var fsmDefinitions = map[int]PeFsmDefinition{
 		sizeBytes: 2,
 		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
 		consume: func(s *PeFsmState, data interface{}) {
-			s.bFile.Header.FileMagicNumber = (data).(uint16)
+			s.bFileOptionalHeader.MagicNumber = (data).(uint16)
 		},
 		nextState:  func(s *PeFsmState) int { return 9 },
 		isEndState: false,
