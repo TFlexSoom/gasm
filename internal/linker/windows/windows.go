@@ -94,7 +94,7 @@ var fsmDefinitions = map[int]PeFsmDefinition{
 	5: { // optional header size
 		sizeBytes:  2,
 		transform:  func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
-		consume:    func(s *PeFsmState, data interface{}) { s.hasOptionalHeader = (data).(uint16) == 28 },
+		consume:    func(s *PeFsmState, data interface{}) { s.hasOptionalHeader = (data).(uint16) != 0 /* 0, 24, or 28 */ },
 		nextState:  func(s *PeFsmState) int { return 6 },
 		isEndState: false,
 	},
@@ -121,7 +121,7 @@ var fsmDefinitions = map[int]PeFsmDefinition{
 			}
 
 			if s.numSectionHeaders > 0 {
-				return 20
+				return 50
 			}
 
 			return 100
@@ -155,16 +155,292 @@ var fsmDefinitions = map[int]PeFsmDefinition{
 		nextState:  func(s *PeFsmState) int { return 11 },
 		isEndState: false,
 	},
-	11: { // optionalFileHeader :: Minor Linker Version
-		sizeBytes: 1,
+	11: { // optionalFileHeader :: Size of Code
+		sizeBytes: 4,
 		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
 		consume: func(s *PeFsmState, data interface{}) {
-			s.bFile.Header. = (data).(uint8)
+			// s.bFile.Header.CodeSize = (data).(uint32)
 		},
-		nextState:  func(s *PeFsmState) int { return 11 },
+		nextState:  func(s *PeFsmState) int { return 12 },
 		isEndState: false,
 	},
-	20: { // section Headers
+	12: { // optionalFileHeader :: Size of Initialized Data
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint32)
+		},
+		nextState:  func(s *PeFsmState) int { return 13 },
+		isEndState: false,
+	},
+	13: { // optionalFileHeader :: Size of Uninitialized Data
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint32)
+		},
+		nextState:  func(s *PeFsmState) int { return 14 },
+		isEndState: false,
+	},
+	14: { // optionalFileHeader :: Address of Entry Point
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			s.bFile.Header.Entrypoint = (data).(uintptr)
+		},
+		nextState:  func(s *PeFsmState) int { return 15 },
+		isEndState: false,
+	},
+	15: { // optionalFileHeader :: Base of Code
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header.CodeBase = (data).(uintptr)
+		},
+		nextState:  func(s *PeFsmState) int { return 16 },
+		isEndState: false,
+	},
+	16: { // optionalFileHeader :: Base of Data -- PE32
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header.DataBase = (data).(uintptr)
+		},
+		nextState:  func(s *PeFsmState) int { return 17 },
+		isEndState: false,
+	},
+	17: { // optionalFileHeader :: Section Alignment
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			s.bFile.Header.SectionAlignment = (data).(uint32)
+		},
+		nextState:  func(s *PeFsmState) int { return 18 },
+		isEndState: false,
+	},
+	18: { // optionalFileHeader :: File Alignment
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			s.bFile.Header.FileAlignment = (data).(uint32)
+		},
+		nextState:  func(s *PeFsmState) int { return 19 },
+		isEndState: false,
+	},
+	19: { // optionalFileHeader :: Major Operating System Version
+		sizeBytes: 2,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			s.bFileOptionalHeader.MajorOSVersion = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 20 },
+		isEndState: false,
+	},
+	20: { // optionalFileHeader :: Minor Operating System Version
+		sizeBytes: 2,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			s.bFileOptionalHeader.MinorOSVersion = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 21 },
+		isEndState: false,
+	},
+	21: { // optionalFileHeader :: Major Image Version
+		sizeBytes: 2,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			s.bFileOptionalHeader.MajorImageVersion = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 22 },
+		isEndState: false,
+	},
+	22: { // optionalFileHeader :: Minor Image Version
+		sizeBytes: 2,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			s.bFileOptionalHeader.MinorImageVersion = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 23 },
+		isEndState: false,
+	},
+	23: { // optionalFileHeader :: Major Subsystem Version
+		sizeBytes: 2,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			s.bFileOptionalHeader.MajorSubsystemVersion = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 24 },
+		isEndState: false,
+	},
+	24: { // optionalFileHeader :: Minor Subsystem Version
+		sizeBytes: 2,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			s.bFileOptionalHeader.MinorSubsystemVersion = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 25 },
+		isEndState: false,
+	},
+	25: { // optionalFileHeader :: Win32VersionValue
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFileOptionalHeader.MinorSubsystemVersion = (data).(uint32)
+		},
+		nextState:  func(s *PeFsmState) int { return 26 },
+		isEndState: false,
+	},
+	26: { // optionalFileHeader :: Size Of Image
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			s.bFile.Header.ImageSize = (data).(uint64)
+		},
+		nextState:  func(s *PeFsmState) int { return 27 },
+		isEndState: false,
+	},
+	27: { // optionalFileHeader :: Size Of Headers
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			s.bFile.Header.HeaderSize = (data).(uint64)
+		},
+		nextState:  func(s *PeFsmState) int { return 28 },
+		isEndState: false,
+	},
+	28: { // optionalFileHeader :: Checksum
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint64)
+		},
+		nextState:  func(s *PeFsmState) int { return 29 },
+		isEndState: false,
+	},
+	29: { // optionalFileHeader :: Subsystem
+		sizeBytes: 2,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 30 },
+		isEndState: false,
+	},
+	30: { // optionalFileHeader :: DllCharacteristics
+		sizeBytes: 2,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint16)
+		},
+		nextState: func(s *PeFsmState) int {
+			if s.bFileOptionalHeader.MagicNumber == 0x20b {
+				return 41
+			}
+
+			return 31
+		},
+		isEndState: false,
+	},
+	31: { // optionalFileHeader :: SizeOfStackReserve
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 32 },
+		isEndState: false,
+	},
+	32: { // optionalFileHeader :: SizeOfStackCommit
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 33 },
+		isEndState: false,
+	},
+	33: { // optionalFileHeader :: SizeOfHeapReserve
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 34 },
+		isEndState: false,
+	},
+	34: { // optionalFileHeader :: SizeOfHeapCommit
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 47 },
+		isEndState: false,
+	},
+	41: { // optionalFileHeader :: SizeOfStackReserve
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 42 },
+		isEndState: false,
+	},
+	42: { // optionalFileHeader :: SizeOfStackCommit
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 43 },
+		isEndState: false,
+	},
+	43: { // optionalFileHeader :: SizeOfHeapReserve
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 44 },
+		isEndState: false,
+	},
+	44: { // optionalFileHeader :: SizeOfHeapCommit
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 47 },
+		isEndState: false,
+	},
+	47: { // optionalFileHeader :: LoaderFlags
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 48 },
+		isEndState: false,
+	},
+	48: { // optionalFileHeader :: NumberOfRvaAndSizes
+		sizeBytes: 4,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.Header. = (data).(uint16)
+		},
+		nextState:  func(s *PeFsmState) int { return 49 },
+		isEndState: false,
+	},
+	49: { // optionalHeaderDataDirectories
+		sizeBytes: 128,
+		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
+		consume: func(s *PeFsmState, data interface{}) {
+			// s.bFile.TargetMagicNumber = global.BinaryFileTarget((data).(uint16))
+		},
+		nextState:  func(s *PeFsmState) int { return 50 },
+		isEndState: false,
+	},
+	50: { // section Headers
 		sizeBytes: 2,
 		transform: func(bs []byte) (interface{}, error) { return global.BytesToVarBigEndian(bs), nil },
 		consume: func(s *PeFsmState, data interface{}) {
