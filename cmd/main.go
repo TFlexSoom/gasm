@@ -90,11 +90,17 @@ var assembleFlags = append(baseFlags,
 		Value:   "x86_64_windows",
 		Aliases: []string{"l", "L"},
 	},
+	&cli.StringSliceFlag{
+		Name:    "includes",
+		Usage:   "Files to include for external symbols and libraries",
+		Aliases: []string{"I", "include"},
+	},
 )
 
 func assembleSubCmd(cCtx *cli.Context) error {
 	return assembler.Assemble(assembler.AssemblerOptions{
 		Files:          cCtx.Args().Slice(),
+		Includes:       cCtx.StringSlice("includes"),
 		OutputLocation: cCtx.Path("output"),
 		Language:       cCtx.String("language"),
 		Verbose:        cCtx.Bool("verbose"),
